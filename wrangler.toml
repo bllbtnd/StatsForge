@@ -3,7 +3,7 @@ main = "build/worker/shim.mjs"
 compatibility_date = "2024-09-23"
 
 [build]
-command = "cargo install -q worker-build && worker-build --release -- --no-default-features --features workers"
+command = ". $HOME/.cargo/env && cargo install -q worker-build && worker-build --release -- --no-default-features --features workers"
 
 # Set GITHUB_TOKEN as a secret (never in this file):
 #   wrangler secret put GITHUB_TOKEN
