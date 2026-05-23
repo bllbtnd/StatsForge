@@ -6,19 +6,36 @@ edition = "2021"
 [lib]
 name = "statsforge"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "statsforge"
 path = "src/main.rs"
+required-features = ["native"]
 
+# ── Shared (native + wasm) ─────────────────────────────────────────────────────
 [dependencies]
-axum = { version = "0.7", features = ["query"] }
-tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", features = ["json"] }
-tower-http = { version = "0.5", features = ["cors", "trace"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde_urlencoded = "0.7"
 thiserror = "1"
-dotenvy = "0.15"
+
+# ── Native only ────────────────────────────────────────────────────────────────
+axum = { version = "0.7", features = ["query"], optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+reqwest = { version = "0.12", features = ["json"], optional = true }
+tower-http = { version = "0.5", features = ["cors", "trace"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+dotenvy = { version = "0.15", optional = true }
+
+# ── Cloudflare Workers (wasm32) ────────────────────────────────────────────────
+worker = { version = "0.5", optional = true }
+
+[features]
+default = ["native"]
+native = [
+  "dep:axum", "dep:tokio", "dep:reqwest",
+  "dep:tower-http", "dep:tracing", "dep:tracing-subscriber", "dep:dotenvy",
+]
+workers = ["dep:worker"]

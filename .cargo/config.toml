@@ -1,0 +1,4 @@
+# When building for wasm32 (e.g. via worker-build), disable default features
+# and enable the workers feature so reqwest/axum are not pulled in.
+[target.wasm32-unknown-unknown]
+rustflags = []

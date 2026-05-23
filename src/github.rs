@@ -68,66 +68,11 @@ struct GqlError {
     message: String,
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Shared aggregation logic ──────────────────────────────────────────────────
 
-pub async fn fetch_language_stats(
-    client: &reqwest::Client,
-    token: &str,
-    username: &str,
-    limit: u8,
-    sort_by: SortBy,
-) -> Result<Vec<LanguageStat>, AppError> {
-    // Fetch up to 100 public repos; for each collect language breakdown.
-    let query = r#"
-        query($login: String!) {
-          user(login: $login) {
-            repositories(
-              first: 100
-              isFork: false
-              ownerAffiliations: OWNER
-              privacy: PUBLIC
-            ) {
-              nodes {
-                languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
-                  edges {
-                    size
-                    node { name color }
-                  }
-                }
-              }
-            }
-          }
-        }
-    "#;
-
-    let body = serde_json::json!({
-        "query": query,
-        "variables": { "login": username }
-    });
-
-    let resp = client
-        .post(GITHUB_GRAPHQL)
-        .bearer_auth(token)
-        .header("User-Agent", "statsforge/0.1")
-        .json(&body)
-        .send()
-        .await?;
-
-    if !resp.status().is_success() {
-        return Err(AppError::GitHub(format!(
-            "GitHub API returned status {}",
-            resp.status()
-        )));
-    }
-
-    let gql: GqlResponse = resp.json().await?;
-
+fn aggregate(gql: GqlResponse, username: &str, limit: u8, sort_by: SortBy) -> Result<Vec<LanguageStat>, AppError> {
     if let Some(errors) = gql.errors {
-        let msg = errors
-            .into_iter()
-            .map(|e| e.message)
-            .collect::<Vec<_>>()
-            .join("; ");
+        let msg = errors.into_iter().map(|e| e.message).collect::<Vec<_>>().join("; ");
         return Err(AppError::GitHub(msg));
     }
 
@@ -136,19 +81,11 @@ pub async fn fetch_language_stats(
         .and_then(|d| d.user)
         .ok_or_else(|| AppError::GitHub(format!("user '{}' not found", username)))?;
 
-    // Aggregate across repos.
-    struct Agg {
-        bytes: u64,
-        repos: u32,
-        color: String,
-    }
+    struct Agg { bytes: u64, repos: u32, color: String }
 
     let mut map: HashMap<String, Agg> = HashMap::new();
-
     for repo in user.repositories.nodes {
-        let Some(langs) = repo.languages else {
-            continue;
-        };
+        let Some(langs) = repo.languages else { continue };
         for edge in langs.edges {
             let entry = map.entry(edge.node.name.clone()).or_insert(Agg {
                 bytes: 0,
@@ -162,12 +99,10 @@ pub async fn fetch_language_stats(
 
     if map.is_empty() {
         return Err(AppError::GitHub(format!(
-            "no public repository language data found for '{}'",
-            username
+            "no public repository language data found for '{}'", username
         )));
     }
 
-    // Sort by the requested field.
     let mut entries: Vec<(String, Agg)> = map.into_iter().collect();
     match sort_by {
         SortBy::Bytes => entries.sort_by(|a, b| b.1.bytes.cmp(&a.1.bytes)),
@@ -176,24 +111,107 @@ pub async fn fetch_language_stats(
 
     let total_bytes: u64 = entries.iter().map(|(_, a)| a.bytes).sum();
 
-    let stats: Vec<LanguageStat> = entries
+    Ok(entries
         .into_iter()
         .take(limit as usize)
-        .map(|(name, agg)| {
-            let percentage = if total_bytes > 0 {
+        .map(|(name, agg)| LanguageStat {
+            percentage: if total_bytes > 0 {
                 (agg.bytes as f64 / total_bytes as f64) * 100.0
             } else {
                 0.0
-            };
-            LanguageStat {
-                name,
-                color: agg.color,
-                bytes: agg.bytes,
-                repo_count: agg.repos,
-                percentage,
-            }
+            },
+            name,
+            color: agg.color,
+            bytes: agg.bytes,
+            repo_count: agg.repos,
         })
-        .collect();
+        .collect())
+}
 
-    Ok(stats)
+fn graphql_body(username: &str) -> serde_json::Value {
+    serde_json::json!({
+        "query": r#"
+            query($login: String!) {
+              user(login: $login) {
+                repositories(
+                  first: 100
+                  isFork: false
+                  ownerAffiliations: OWNER
+                  privacy: PUBLIC
+                ) {
+                  nodes {
+                    languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
+                      edges { size node { name color } }
+                    }
+                  }
+                }
+              }
+            }
+        "#,
+        "variables": { "login": username }
+    })
+}
+
+// ── Native (reqwest) implementation ───────────────────────────────────────────
+
+#[cfg(feature = "native")]
+pub async fn fetch_language_stats(
+    client: &reqwest::Client,
+    token: &str,
+    username: &str,
+    limit: u8,
+    sort_by: SortBy,
+) -> Result<Vec<LanguageStat>, AppError> {
+    let resp = client
+        .post(GITHUB_GRAPHQL)
+        .bearer_auth(token)
+        .header("User-Agent", "statsforge/0.1")
+        .json(&graphql_body(username))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        return Err(AppError::GitHub(format!("GitHub API returned status {}", resp.status())));
+    }
+
+    let gql: GqlResponse = resp.json().await?;
+    aggregate(gql, username, limit, sort_by)
+}
+
+// ── Workers (worker::Fetch) implementation ────────────────────────────────────
+
+#[cfg(feature = "workers")]
+pub async fn fetch_language_stats_workers(
+    token: &str,
+    username: &str,
+    limit: u8,
+    sort_by: SortBy,
+) -> Result<Vec<LanguageStat>, worker::Error> {
+    use worker::{wasm_bindgen::JsValue, Fetch, Headers, Method, Request as WReq, RequestInit};
+
+    let body_str = serde_json::to_string(&graphql_body(username))
+        .map_err(|e| worker::Error::RustError(e.to_string()))?;
+
+    let mut headers = Headers::new();
+    headers.set("Authorization", &format!("Bearer {}", token))?;
+    headers.set("Content-Type", "application/json")?;
+    headers.set("User-Agent", "statsforge/0.1")?;
+
+    let mut init = RequestInit::new();
+    init.with_method(Method::Post)
+        .with_headers(headers)
+        .with_body(Some(JsValue::from_str(&body_str)));
+
+    let request = WReq::new_with_init(GITHUB_GRAPHQL, &init)?;
+    let mut resp = Fetch::Request(request).send().await?;
+
+    if resp.status_code() != 200 {
+        return Err(worker::Error::RustError(format!(
+            "GitHub API returned status {}", resp.status_code()
+        )));
+    }
+
+    let gql: GqlResponse = resp.json().await?;
+    aggregate(gql, username, limit, sort_by)
+        .map_err(|e| worker::Error::RustError(e.to_string()))
 }

@@ -1,10 +1,11 @@
+use thiserror::Error;
+
+#[cfg(feature = "native")]
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use serde_json::json;
-use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -17,20 +18,22 @@ pub enum AppError {
     #[error("GitHub API error: {0}")]
     GitHub(String),
 
+    #[cfg(feature = "native")]
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
 }
 
+#[cfg(feature = "native")]
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
             AppError::MissingParam(_) | AppError::InvalidParam { .. } => {
                 (StatusCode::BAD_REQUEST, self.to_string())
             }
-            AppError::GitHub(_) => (StatusCode::BAD_GATEWAY, self.to_string()),
-            AppError::Http(_) => (StatusCode::BAD_GATEWAY, self.to_string()),
+            AppError::GitHub(_) | AppError::Http(_) => {
+                (StatusCode::BAD_GATEWAY, self.to_string())
+            }
         };
-
-        (status, Json(json!({ "error": message }))).into_response()
+        (status, Json(serde_json::json!({ "error": message }))).into_response()
     }
 }
