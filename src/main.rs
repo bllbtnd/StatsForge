@@ -1,9 +1,3 @@
-mod config;
-mod error;
-mod github;
-mod params;
-mod svg;
-
 use std::sync::Arc;
 
 use axum::{
@@ -17,9 +11,13 @@ use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use config::Config;
-use error::AppError;
-use params::{CardParams, RawParams};
+use statsforge::{
+    config::Config,
+    error::AppError,
+    github,
+    params::{CardParams, RawParams},
+    svg,
+};
 
 #[derive(Clone)]
 struct AppState {
