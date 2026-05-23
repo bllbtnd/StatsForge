@@ -129,15 +129,15 @@ fn aggregate(gql: GqlResponse, username: &str, limit: u8, sort_by: SortBy) -> Re
 }
 
 fn graphql_body(username: &str) -> serde_json::Value {
+    // No privacy/fork filters — include all repos the token can see so that
+    // accounts with only private repos or forked repos still get results.
     serde_json::json!({
         "query": r#"
             query($login: String!) {
               user(login: $login) {
                 repositories(
                   first: 100
-                  isFork: false
-                  ownerAffiliations: OWNER
-                  privacy: PUBLIC
+                  ownerAffiliations: [OWNER, COLLABORATOR]
                 ) {
                   nodes {
                     languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
