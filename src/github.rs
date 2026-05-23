@@ -192,7 +192,7 @@ pub async fn fetch_language_stats_workers(
     let body_str = serde_json::to_string(&graphql_body(username))
         .map_err(|e| worker::Error::RustError(e.to_string()))?;
 
-    let mut headers = Headers::new();
+    let headers = Headers::new();
     headers.set("Authorization", &format!("Bearer {}", token))?;
     headers.set("Content-Type", "application/json")?;
     headers.set("User-Agent", "statsforge/0.1")?;
