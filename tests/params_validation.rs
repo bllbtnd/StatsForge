@@ -14,6 +14,7 @@ fn raw(username: &str) -> RawParams {
         text_size: None,
         sort_by: None,
         border_radius: None,
+        exclude_languages: None,
     }
 }
 
@@ -87,4 +88,27 @@ fn defaults_are_sensible() {
     assert!(p.show_percentages);
     assert_eq!(p.border_radius, 12);
     assert!((p.text_size - 1.0).abs() < f32::EPSILON);
+    assert!(p.exclude_languages.is_empty());
+}
+
+#[test]
+fn exclude_languages_parsed_and_lowercased() {
+    let mut r = raw("user");
+    r.exclude_languages = Some("HTML,CSS, Markdown , dockerfile".into());
+    let p = CardParams::from_raw(r).unwrap();
+    assert_eq!(p.exclude_languages, vec!["html", "css", "markdown", "dockerfile"]);
+}
+
+#[test]
+fn exclude_languages_empty_string_gives_empty_vec() {
+    let mut r = raw("user");
+    r.exclude_languages = Some("".into());
+    let p = CardParams::from_raw(r).unwrap();
+    assert!(p.exclude_languages.is_empty());
+}
+
+#[test]
+fn exclude_languages_none_gives_empty_vec() {
+    let p = CardParams::from_raw(raw("user")).unwrap();
+    assert!(p.exclude_languages.is_empty());
 }

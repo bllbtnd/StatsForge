@@ -45,6 +45,7 @@ fn default_params() -> CardParams {
         text_size: None,
         sort_by: None,
         border_radius: None,
+        exclude_languages: None,
     })
     .unwrap()
 }

@@ -52,6 +52,7 @@ async fn try_handle_card(req: Request, ctx: worker::RouteContext<()>) -> Result<
         &card_params.username,
         card_params.number_of_languages,
         card_params.sort_by,
+        &card_params.exclude_languages,
     )
     .await
     .map_err(|e| worker::Error::RustError(e.to_string()))?;

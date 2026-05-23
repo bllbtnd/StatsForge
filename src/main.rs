@@ -80,6 +80,7 @@ async fn card_handler(
         &params.username,
         params.number_of_languages,
         params.sort_by,
+        &params.exclude_languages,
     )
     .await?;
 

@@ -43,6 +43,9 @@ pub struct RawParams {
     pub sort_by: Option<SortBy>,
     #[serde(rename = "borderRadius")]
     pub border_radius: Option<u32>,
+    /// Comma-separated language names to exclude, e.g. `HTML,CSS,Markdown`.
+    #[serde(rename = "excludeLanguages")]
+    pub exclude_languages: Option<String>,
 }
 
 /// Validated, ready-to-use parameters.
@@ -60,6 +63,8 @@ pub struct CardParams {
     pub text_size: f32,
     pub sort_by: SortBy,
     pub border_radius: u32,
+    /// Language names (lowercased) that should be excluded from results.
+    pub exclude_languages: Vec<String>,
 }
 
 impl CardParams {
@@ -139,6 +144,16 @@ impl CardParams {
             });
         }
 
+        // Parse comma-separated exclusion list; normalise to lowercase for
+        // case-insensitive matching against GitHub language names.
+        let exclude_languages = raw
+            .exclude_languages
+            .unwrap_or_default()
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+
         Ok(CardParams {
             username,
             theme: raw.theme.unwrap_or_default(),
@@ -152,6 +167,7 @@ impl CardParams {
             text_size,
             sort_by: raw.sort_by.unwrap_or_default(),
             border_radius,
+            exclude_languages,
         })
     }
 }

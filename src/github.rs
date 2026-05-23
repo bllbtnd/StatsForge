@@ -70,7 +70,7 @@ struct GqlError {
 
 // ── Shared aggregation logic ──────────────────────────────────────────────────
 
-fn aggregate(gql: GqlResponse, username: &str, limit: u8, sort_by: SortBy) -> Result<Vec<LanguageStat>, AppError> {
+fn aggregate(gql: GqlResponse, username: &str, limit: u8, sort_by: SortBy, exclude: &[String]) -> Result<Vec<LanguageStat>, AppError> {
     if let Some(errors) = gql.errors {
         let msg = errors.into_iter().map(|e| e.message).collect::<Vec<_>>().join("; ");
         return Err(AppError::GitHub(msg));
@@ -103,7 +103,11 @@ fn aggregate(gql: GqlResponse, username: &str, limit: u8, sort_by: SortBy) -> Re
         )));
     }
 
-    let mut entries: Vec<(String, Agg)> = map.into_iter().collect();
+    // Drop excluded languages (case-insensitive — `exclude` is pre-lowercased).
+    let mut entries: Vec<(String, Agg)> = map
+        .into_iter()
+        .filter(|(name, _)| !exclude.contains(&name.to_lowercase()))
+        .collect();
     match sort_by {
         SortBy::Bytes => entries.sort_by(|a, b| b.1.bytes.cmp(&a.1.bytes)),
         SortBy::Repos => entries.sort_by(|a, b| b.1.repos.cmp(&a.1.repos)),
@@ -161,6 +165,7 @@ pub async fn fetch_language_stats(
     username: &str,
     limit: u8,
     sort_by: SortBy,
+    exclude: &[String],
 ) -> Result<Vec<LanguageStat>, AppError> {
     let resp = client
         .post(GITHUB_GRAPHQL)
@@ -175,7 +180,7 @@ pub async fn fetch_language_stats(
     }
 
     let gql: GqlResponse = resp.json().await?;
-    aggregate(gql, username, limit, sort_by)
+    aggregate(gql, username, limit, sort_by, exclude)
 }
 
 // ── Workers (worker::Fetch) implementation ────────────────────────────────────
@@ -186,6 +191,7 @@ pub async fn fetch_language_stats_workers(
     username: &str,
     limit: u8,
     sort_by: SortBy,
+    exclude: &[String],
 ) -> Result<Vec<LanguageStat>, worker::Error> {
     use worker::{wasm_bindgen::JsValue, Fetch, Headers, Method, Request as WReq, RequestInit};
 
@@ -212,6 +218,6 @@ pub async fn fetch_language_stats_workers(
     }
 
     let gql: GqlResponse = resp.json().await?;
-    aggregate(gql, username, limit, sort_by)
+    aggregate(gql, username, limit, sort_by, exclude)
         .map_err(|e| worker::Error::RustError(e.to_string()))
 }

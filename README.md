@@ -44,6 +44,7 @@ open "http://localhost:3000/card?username=bllbtnd"
 | `textSize`           | float   | `1.0`   | `0.5`–`2.0`             | Font scale multiplier                   |
 | `sortBy`             | string  | `bytes` | `bytes`, `repos`        | Rank languages by bytes written or repo count |
 | `borderRadius`       | integer | `12`    | `0`–`40` (px)           | Corner rounding of the card             |
+| `excludeLanguages`   | string  | —       | comma-separated names   | Languages to hide (e.g. `HTML,CSS`)     |
 
 ### Full example — every parameter at once
 
@@ -61,12 +62,13 @@ https://statsforge.botond-balla.workers.dev/card
   &textSize=1.0
   &sortBy=bytes
   &borderRadius=12
+  &excludeLanguages=HTML,CSS,Dockerfile
 ```
 
 As a single URL (copy-paste ready):
 
 ```
-https://statsforge.botond-balla.workers.dev/card?username=bllbtnd&theme=dark&primaryColor=%231c1f26&accentColor=%232dc9a8&barAnimationSpeed=1000&numberOfLanguages=5&barHeight=10&cardWidth=400&showPercentages=true&textSize=1.0&sortBy=bytes&borderRadius=12
+https://statsforge.botond-balla.workers.dev/card?username=bllbtnd&theme=dark&primaryColor=%231c1f26&accentColor=%232dc9a8&barAnimationSpeed=1000&numberOfLanguages=5&barHeight=10&cardWidth=400&showPercentages=true&textSize=1.0&sortBy=bytes&borderRadius=12&excludeLanguages=HTML,CSS,Dockerfile
 ```
 
 ### Other presets
@@ -89,6 +91,9 @@ https://statsforge.botond-balla.workers.dev/card?username=bllbtnd&theme=dark&pri
 
 # Minimal square card
 ?username=bllbtnd&cardWidth=200&numberOfLanguages=3&borderRadius=0
+
+# Exclude markup / config languages to focus on real code
+?username=bllbtnd&excludeLanguages=HTML,CSS,Dockerfile,Shell,Makefile
 ```
 
 > **Note:** `#` in hex colours must be URL-encoded as `%23`.
