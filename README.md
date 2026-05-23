@@ -4,10 +4,8 @@ A GitHub language-stats card generator written in Rust.
 Send a GET request → get back a beautiful animated SVG card showing a user's top languages.
 
 ```
-GET /card?username=botond
+GET /card?username=bllbtnd
 ```
-
-![example card](https://i.imgur.com/placeholder.png)
 
 ---
 
@@ -19,46 +17,81 @@ git clone <repo-url> && cd statsforge
 
 # 2. Create a .env file (copy the example)
 cp .env.example .env
-#    Then fill in GITHUB_TOKEN with a classic token that has `read:user` scope
+#    Then fill in GITHUB_TOKEN with a classic token that has read:user scope
 
 # 3. Run
 cargo run --release
 
 # 4. Open in a browser
-open "http://localhost:3000/card?username=botond"
+open "http://localhost:3000/card?username=bllbtnd"
 ```
 
 ---
 
 ## Query parameters
 
-| Parameter            | Type    | Default | Description                                      |
-|----------------------|---------|---------|--------------------------------------------------|
-| `username`           | string  | —       | **Required.** GitHub username (1–39 chars)       |
-| `theme`              | string  | `dark`  | `dark` or `light`                                |
-| `primaryColor`       | hex     | —       | Override card background colour                  |
-| `accentColor`        | hex     | —       | Override gradient end colour                     |
-| `barAnimationSpeed`  | ms      | `1000`  | Animation duration (100–5000 ms)                 |
-| `numberOfLanguages`  | integer | `5`     | How many languages to show (1–10)                |
-| `barHeight`          | px      | `10`    | Bar height in pixels (4–40)                      |
-| `cardWidth`          | px      | `400`   | Card width in pixels (200–800)                   |
-| `showPercentages`    | boolean | `true`  | Show or hide the percentage labels               |
-| `textSize`           | float   | `1.0`   | Font scale multiplier (0.5–2.0)                  |
-| `sortBy`             | string  | `bytes` | `bytes` or `repos`                               |
-| `borderRadius`       | px      | `12`    | Corner radius (0–40)                             |
+| Parameter            | Type    | Default | Allowed values          | Description                             |
+|----------------------|---------|---------|-------------------------|-----------------------------------------|
+| `username`           | string  | —       | any GitHub username     | **Required.** 1–39 alphanumeric/hyphen  |
+| `theme`              | string  | `dark`  | `dark`, `light`         | Card colour scheme                      |
+| `primaryColor`       | hex     | —       | `#rrggbb` or `#rgb`     | Override card background colour         |
+| `accentColor`        | hex     | —       | `#rrggbb` or `#rgb`     | Override gradient end colour            |
+| `barAnimationSpeed`  | integer | `1000`  | `100`–`5000` (ms)       | Bar grow animation duration             |
+| `numberOfLanguages`  | integer | `5`     | `1`–`10`                | How many languages to show              |
+| `barHeight`          | integer | `10`    | `4`–`40` (px)           | Height of each bar                      |
+| `cardWidth`          | integer | `400`   | `200`–`800` (px)        | Total card width                        |
+| `showPercentages`    | boolean | `true`  | `true`, `false`         | Show or hide the `xx.x%` labels         |
+| `textSize`           | float   | `1.0`   | `0.5`–`2.0`             | Font scale multiplier                   |
+| `sortBy`             | string  | `bytes` | `bytes`, `repos`        | Rank languages by bytes written or repo count |
+| `borderRadius`       | integer | `12`    | `0`–`40` (px)           | Corner rounding of the card             |
 
-### Examples
+### Full example — every parameter at once
 
 ```
-# Light theme, wider card
-/card?username=botond&theme=light&cardWidth=500
-
-# Top 3 languages sorted by repo count, custom accent
-/card?username=botond&numberOfLanguages=3&sortBy=repos&accentColor=%23ff6b35
-
-# Minimal — no percentages, thin bars
-/card?username=botond&showPercentages=false&barHeight=6
+https://statsforge.botond-balla.workers.dev/card
+  ?username=bllbtnd
+  &theme=dark
+  &primaryColor=%231c1f26
+  &accentColor=%232dc9a8
+  &barAnimationSpeed=1000
+  &numberOfLanguages=5
+  &barHeight=10
+  &cardWidth=400
+  &showPercentages=true
+  &textSize=1.0
+  &sortBy=bytes
+  &borderRadius=12
 ```
+
+As a single URL (copy-paste ready):
+
+```
+https://statsforge.botond-balla.workers.dev/card?username=bllbtnd&theme=dark&primaryColor=%231c1f26&accentColor=%232dc9a8&barAnimationSpeed=1000&numberOfLanguages=5&barHeight=10&cardWidth=400&showPercentages=true&textSize=1.0&sortBy=bytes&borderRadius=12
+```
+
+### Other presets
+
+```bash
+# Light theme
+?username=bllbtnd&theme=light
+
+# Wide card with 8 languages sorted by repo count
+?username=bllbtnd&cardWidth=600&numberOfLanguages=8&sortBy=repos
+
+# Custom brand colours
+?username=bllbtnd&primaryColor=%230d1117&accentColor=%23ff6b35
+
+# Compact — thin bars, no percentages, tight corners
+?username=bllbtnd&barHeight=6&showPercentages=false&borderRadius=4
+
+# Slow dramatic animation, large text
+?username=bllbtnd&barAnimationSpeed=3000&textSize=1.4
+
+# Minimal square card
+?username=bllbtnd&cardWidth=200&numberOfLanguages=3&borderRadius=0
+```
+
+> **Note:** `#` in hex colours must be URL-encoded as `%23`.
 
 ---
 
@@ -67,23 +100,28 @@ open "http://localhost:3000/card?username=botond"
 | Variable        | Required | Default | Description                                   |
 |-----------------|----------|---------|-----------------------------------------------|
 | `GITHUB_TOKEN`  | Yes      | —       | GitHub personal access token (`read:user`)    |
-| `PORT`          | No       | `3000`  | TCP port the server listens on                |
+| `PORT`          | No       | `3000`  | TCP port the server listens on (local only)   |
 
 ---
 
 ## Caching
 
-The response includes `Cache-Control: public, max-age=3600` so CDNs and browsers
-cache cards for one hour. The service itself is stateless — safe to run behind any
-reverse proxy or load balancer.
+Responses include `Cache-Control: public, max-age=3600` so CDNs and browsers
+cache cards for one hour. The service is stateless — safe behind any reverse proxy or load balancer.
 
 ---
 
 ## Development
 
 ```bash
-cargo test          # run unit + integration tests
-cargo check         # fast type-check without codegen
-cargo build --release
-RUST_LOG=debug cargo run  # verbose logging
+cargo test                                                         # unit + integration tests
+cargo check                                                        # fast type-check
+cargo build --release                                              # native binary
+RUST_LOG=debug cargo run                                           # verbose logging
+
+# Check wasm target compiles
+cargo check --target wasm32-unknown-unknown --no-default-features --features workers
+
+npx wrangler dev    # local Workers preview (uses real Cloudflare runtime)
+npx wrangler deploy # deploy to https://statsforge.botond-balla.workers.dev
 ```
