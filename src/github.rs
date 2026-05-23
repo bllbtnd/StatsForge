@@ -139,7 +139,7 @@ fn graphql_body(username: &str) -> serde_json::Value {
               user(login: $login) {
                 repositories(
                   first: 100
-                  ownerAffiliations: OWNER
+                  ownerAffiliations: [OWNER, COLLABORATOR]
                 ) {
                   nodes {
                     languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
