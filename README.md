@@ -10,13 +10,13 @@ Paste a URL into your README and get a beautiful animated SVG card showing any u
 No setup required. Just use the live URL:
 
 ```md
-![GitHub Stats](https://statsforge.botond-balla.workers.dev/card?username=yourname)
+![GitHub Stats](https://statsforge.ballabotond.com/card?username=yourname)
 ```
 
 Or in HTML:
 
 ```html
-<img src="https://statsforge.botond-balla.workers.dev/card?username=yourname" alt="GitHub Stats" />
+<img src="https://statsforge.ballabotond.com/card?username=yourname" alt="GitHub Stats" />
 ```
 
 Swap `yourname` for any GitHub username. That's it.
@@ -44,7 +44,7 @@ Swap `yourname` for any GitHub username. That's it.
 ### Full example — every parameter at once
 
 ```
-https://statsforge.botond-balla.workers.dev/card
+https://statsforge.ballabotond.com/card
   ?username=yourname
   &theme=dark
   &primaryColor=%231c1f26
@@ -63,7 +63,7 @@ https://statsforge.botond-balla.workers.dev/card
 As a single URL (copy-paste ready):
 
 ```
-https://statsforge.botond-balla.workers.dev/card?username=yourname&theme=dark&primaryColor=%231c1f26&accentColor=%232dc9a8&barAnimationSpeed=1000&numberOfLanguages=5&barHeight=10&cardWidth=400&showPercentages=true&textSize=1.0&sortBy=bytes&borderRadius=12&excludeLanguages=HTML,CSS,Dockerfile
+https://statsforge.ballabotond.com/card?username=yourname&theme=dark&primaryColor=%231c1f26&accentColor=%232dc9a8&barAnimationSpeed=1000&numberOfLanguages=5&barHeight=10&cardWidth=400&showPercentages=true&textSize=1.0&sortBy=bytes&borderRadius=12&excludeLanguages=HTML,CSS,Dockerfile
 ```
 
 ### Presets
